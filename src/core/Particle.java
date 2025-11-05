@@ -1,3 +1,5 @@
+package core;
+
 /**
  * Un registro de Java proporciona automáticamente un constructor, métodos de acceso y métodos de igualdad.
  *

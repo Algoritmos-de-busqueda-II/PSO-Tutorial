@@ -1,148 +1,416 @@
-PSO-Tutorial
-=============
+# PSO Tutorial - Optimización por Enjambre de Partículas
 
-Resumen
-------
-Proyecto de ejemplo que implementa un PSO (Particle Swarm Optimization) muy simple en Java.
+## 📋 Objetivos
 
-Contenido del repositorio (directorio `src/`)
-- `Main.java` — Programa principal que crea el problema y ejecuta el PSO.
-- `Particle.java` — Representa una partícula (posición x,y y velocidades vx,vy). Implementado como `record` (Java 16+).
-- `Problem.java` — Interfaz que define `double evaluate(Particle p)` para evaluar una partícula.
-- `SimpleFunctionProblem.java` — Implementación concreta de `Problem` que define la función objetivo.
-- `SimplePSO.java` — Implementación básica del algoritmo PSO.
-- `Resultados_ejecucion_PSO.xlsx` — hoja con resultados (no usada por el código).
+Este proyecto tiene como objetivos principales:
 
-Requisitos
----------
-- Java 16 o superior (el proyecto usa `record` que requiere Java 16+).
-- Compilador `javac` y `java` en PATH.
+1. **Aprender PSO (Particle Swarm Optimization)**: Entender los fundamentos de este algoritmo de optimización bioinspirado.
+2. **Implementación práctica**: Proporcionar un código Java limpio y modular que sea fácil de entender y modificar.
+3. **Experimentación**: Permitir probar el algoritmo con múltiples funciones de prueba (benchmarks) para observar su comportamiento.
+4. **Visualización**: Ofrecer herramientas gráficas para visualizar en tiempo real cómo las partículas exploran el espacio de búsqueda.
+5. **Uso educativo**: Servir como material didáctico para clases de inteligencia artificial, optimización y metaheurísticas.
 
-Cómo compilar y ejecutar (Windows, cmd.exe)
-----------------------------------------
-En la raíz del proyecto (donde está `src`):
+---
+
+## 🧠 Introducción a PSO (Particle Swarm Optimization)
+
+### ¿Qué es PSO?
+
+PSO es un algoritmo de optimización metaheurístico inspirado en el comportamiento social de bandadas de aves o cardúmenes de peces. Fue desarrollado por Kennedy y Eberhart en 1995.
+
+### Conceptos clave
+
+- **Partícula**: Representa una solución candidata en el espacio de búsqueda. Cada partícula tiene:
+  - **Posición** (x, y): Punto actual en el espacio de búsqueda
+  - **Velocidad** (vx, vy): Dirección y magnitud del movimiento
+  
+- **Enjambre (Swarm)**: Conjunto de partículas que colaboran para encontrar el óptimo.
+
+- **Memoria local (pbest)**: Cada partícula recuerda la mejor posición que ha visitado.
+
+- **Memoria global (gbest)**: El enjambre mantiene la mejor posición encontrada por cualquier partícula.
+
+### ¿Cómo funciona?
+
+Las partículas se mueven por el espacio de búsqueda influenciadas por:
+1. Su propia inercia (siguen moviéndose en su dirección actual)
+2. Su mejor experiencia personal (atracción hacia pbest)
+3. La mejor experiencia del enjambre (atracción hacia gbest)
+
+Esta combinación permite **exploración** (buscar nuevas regiones) y **explotación** (refinar soluciones prometedoras).
+
+### Parámetros del algoritmo
+
+- **w (inercia)**: Controla cuánto influye la velocidad anterior. Valores típicos: 0.4-0.9
+- **c1 (coeficiente cognitivo)**: Atracción hacia la mejor posición personal. Típico: 1.4-2.0
+- **c2 (coeficiente social)**: Atracción hacia la mejor posición global. Típico: 1.4-2.0
+- **vmax**: Velocidad máxima permitida (evita movimientos excesivos)
+- **Número de partículas**: Entre 10-50 suele ser suficiente
+- **Iteraciones**: Depende del problema (50-500 iteraciones típicamente)
+
+---
+
+## 📐 Algoritmo PSO (Pseudocódigo)
 
 ```
-javac -d out src\*.java
+Algoritmo: Particle Swarm Optimization (PSO)
+
+ENTRADA:
+  - numPartículas: cantidad de partículas en el enjambre
+  - numIteraciones: número de iteraciones máximas
+  - w: coeficiente de inercia
+  - c1: coeficiente cognitivo (componente local)
+  - c2: coeficiente social (componente global)
+  - vmax: velocidad máxima permitida
+  - dominio: [xMin, xMax] × [yMin, yMax]
+  - función_objetivo: función a optimizar
+
+SALIDA:
+  - gbest: mejor solución encontrada
+
+INICIALIZACIÓN:
+  Para cada partícula i = 1 hasta numPartículas:
+    posición[i] ← aleatorio en [xMin, xMax] × [yMin, yMax]
+    velocidad[i] ← aleatorio en [-vmax, vmax] × [-vmax, vmax]
+    pbest[i] ← posición[i]
+    pbest_valor[i] ← evaluar(posición[i])
+  
+  gbest ← mejor de todas las pbest
+  gbest_valor ← pbest_valor[argmin(pbest_valor)]
+
+BUCLE PRINCIPAL:
+  Para iter = 1 hasta numIteraciones:
+    Para cada partícula i = 1 hasta numPartículas:
+      // Actualizar velocidad
+      r1 ← aleatorio(0, 1)
+      r2 ← aleatorio(0, 1)
+      
+      velocidad[i].x ← w × velocidad[i].x 
+                       + c1 × r1 × (pbest[i].x - posición[i].x)
+                       + c2 × r2 × (gbest.x - posición[i].x)
+      
+      velocidad[i].y ← w × velocidad[i].y 
+                       + c1 × r1 × (pbest[i].y - posición[i].y)
+                       + c2 × r2 × (gbest.y - posición[i].y)
+      
+      // Limitar velocidad
+      velocidad[i] ← clamp(velocidad[i], -vmax, vmax)
+      
+      // Actualizar posición
+      posición[i] ← posición[i] + velocidad[i]
+      
+      // Mantener dentro del dominio
+      posición[i] ← clamp(posición[i], [xMin,yMin], [xMax,yMax])
+      
+      // Evaluar nueva posición
+      valor ← evaluar(posición[i])
+      
+      // Actualizar mejor personal
+      Si valor < pbest_valor[i]:
+        pbest[i] ← posición[i]
+        pbest_valor[i] ← valor
+      
+      // Actualizar mejor global
+      Si valor < gbest_valor:
+        gbest ← posición[i]
+        gbest_valor ← valor
+    
+    Imprimir(iter, gbest, gbest_valor)
+  
+  Devolver gbest
+```
+
+---
+
+## 🗂️ Estructura del Código
+
+El proyecto está organizado en paquetes modulares:
+
+```
+PSO-Tutorial/
+├── README.md
+├── src/
+│   ├── Main.java                    # Programa principal (punto de entrada)
+│   ├── core/                        # Núcleo del algoritmo PSO
+│   │   ├── Particle.java            # Record que representa una partícula
+│   │   ├── Problem.java             # Interfaz para funciones objetivo
+│   │   └── SimplePSO.java           # Implementación del algoritmo PSO
+│   ├── functions/                   # Funciones de prueba (benchmarks)
+│   │   ├── Function1.java           # Paraboloide perturbado
+│   │   ├── Function2.java           # Sphere
+│   │   ├── Function3.java           # Rosenbrock
+│   │   ├── Function4.java           # Rastrigin
+│   │   ├── Function5.java           # Ackley
+│   │   ├── Function6.java           # Himmelblau
+│   │   ├── Function7.java           # Beale
+│   │   ├── Function8.java           # Booth
+│   │   ├── Function9.java           # Bukin N.6
+│   │   └── Function10.java          # Six-hump Camelback
+│   └── ui/                          # Utilidades de visualización
+│       ├── FunctionPlotter.java     # Renderiza mapas de calor y partículas
+│       └── PlotDemo.java            # Demo para generar imágenes PNG
+└── out/                             # Clases compiladas (generado)
+```
+
+### Descripción de componentes clave
+
+#### 📦 Paquete `core`
+
+**`Particle.java`** - Representa una partícula:
+```java
+public record Particle(double x, double y, double vx, double vy)
+```
+- `x, y`: Posición en el espacio 2D
+- `vx, vy`: Componentes de velocidad
+
+**`Problem.java`** - Interfaz para funciones objetivo:
+```java
+public interface Problem {
+    double evaluate(Particle p);  // Evalúa la función
+    double xMin();                // Límite inferior en X
+    double xMax();                // Límite superior en X
+    double yMin();                // Límite inferior en Y
+    double yMax();                // Límite superior en Y
+}
+```
+
+**`SimplePSO.java`** - Motor del algoritmo:
+- Inicializa el enjambre aleatoriamente
+- Ejecuta el bucle principal del PSO
+- Actualiza velocidades y posiciones
+- Gestiona pbest y gbest
+- Soporta visualización mediante `PSOListener`
+
+#### 🎯 Paquete `functions`
+
+Cada función implementa `Problem` y define su dominio óptimo. Incluye:
+
+| Función | Tipo | Características | Dominio | Fórmula |
+|---------|------|----------------|---------|---------|
+| Function1 | Sintética | Paraboloide con perturbaciones sinusoidales | [0,5]² | $f(x,y) = (x-3.14)^2 + (y-2.72)^2 + \sin(3x+1.41) + \sin(4y-1.73)$ |
+| Function2 | Sphere | Convexa, 1 mínimo global | [-5.12,5.12]² | $f(x,y) = x^2 + y^2$ |
+| Function3 | Rosenbrock | Valle estrecho, difícil convergencia | [-2.048,2.048]² | $f(x,y) = (1-x)^2 + 100(y-x^2)^2$ |
+| Function4 | Rastrigin | Altamente multimodal (muchos mínimos locales) | [-5.12,5.12]² | $f(x,y) = 20 + x^2 + y^2 - 10[\cos(2\pi x) + \cos(2\pi y)]$ |
+| Function5 | Ackley | Multimodal, casi plana lejos del óptimo | [-5,5]² | $f(x,y) = -20e^{-0.2\sqrt{0.5(x^2+y^2)}} - e^{0.5[\cos(2\pi x)+\cos(2\pi y)]} + e + 20$ |
+| Function6 | Himmelblau | 4 mínimos globales idénticos | [-5,5]² | $f(x,y) = (x^2+y-11)^2 + (x+y^2-7)^2$ |
+| Function7 | Beale | Valle, mínimo en (3, 0.5) | [-4.5,4.5]² | $f(x,y) = (1.5-x+xy)^2 + (2.25-x+xy^2)^2 + (2.625-x+xy^3)^2$ |
+| Function8 | Booth | Convexa, mínimo en (1, 3) | [-10,10]² | $f(x,y) = (x+2y-7)^2 + (2x+y-5)^2$ |
+| Function9 | Bukin N.6 | Valle muy estrecho, difícil | x∈[-15,-5], y∈[-3,3] | $f(x,y) = 100\sqrt{\|y-0.01x^2\|} + 0.01\|x+10\|$ |
+| Function10 | Six-hump Camelback | 6 mínimos locales, 2 globales | x∈[-3,3], y∈[-2,2] | $f(x,y) = \left(4-2.1x^2+\frac{x^4}{3}\right)x^2 + xy + (-4+4y^2)y^2$ |
+
+#### 🎨 Paquete `ui`
+
+**`FunctionPlotter.java`** - Visualizador avanzado:
+- Genera mapas de calor de la función objetivo
+- Dibuja ejes cartesianos y rejilla
+- Marca el mínimo encontrado
+- Superpone las partículas del enjambre en tiempo real
+- Exporta imágenes PNG
+
+**`PlotDemo.java`** - Ejemplo para generar visualizaciones estáticas.
+
+---
+
+## 🚀 Cómo Ejecutar
+
+### Requisitos previos
+
+- **Java 16 o superior** (el proyecto usa `record`)
+- `javac` y `java` en el PATH del sistema
+
+### Compilación
+
+Abre una terminal (cmd en Windows) en la raíz del proyecto y ejecuta:
+
+```cmd
+javac -d out src\*.java src\core\*.java src\functions\*.java src\ui\*.java
+```
+
+Esto compilará todos los archivos `.java` y colocará las clases en el directorio `out/`.
+
+### Ejecución del programa principal
+
+```cmd
 java -cp out Main
 ```
 
-Descripción básica del código
------------------------------
-- `Particle` es un objeto inmutable que guarda posición (x,y) y velocidad (vx,vy).
-- `Problem.evaluate(Particle)` devuelve un valor numérico para la partícula. El PSO en `SimplePSO` está escrito tratándolo como un problema de minimización.
-- `SimpleFunctionProblem.evaluate` implementa la función:
-  f(x,y) = (x-3.14)^2 + (y-2.72)^2 + sin(3x + 1.41) + sin(4y - 1.73)
-  Nota: en el código el comentario dice "Función a maximizar" pero el PSO la trata como minimización — es una inconsistencia en el comentario. La implementación actual hace minimización.
+Esto ejecutará el PSO con visualización en tiempo real (si `visualize = true` en `Main.java`).
 
-Cómo funciona el PSO en este código
------------------------------------
-Flujo general (en `SimplePSO.run`):
-1. Inicializa `numParticles` partículas con posiciones aleatorias en [lowerBound, upperBound] (aquí [0,5]) y velocidades aleatorias en [0,1].
-2. Inicializa `localBest[i]` como copia de cada partícula y determina `globalBest` con el menor valor de `evaluate` (minimización).
-3. Repite `numIterations` veces:
-   - Para cada partícula calcula la nueva velocidad usando la fórmula clásica velo = w*vel + c1*r1*(pbest - pos) + c2*r2*(gbest - pos).
-   - Actualiza la posición sumando la velocidad.
-   - Si la nueva posición tiene mejor valor que el `localBest`, actualiza `localBest`.
-   - Si la nueva posición tiene mejor valor que `globalBest`, actualiza `globalBest`.
-4. Devuelve `globalBest`.
+### Generar una imagen PNG de una función
 
-Puntos a tener en cuenta / observaciones
----------------------------------------
-1. Comentarios inconsistentes: en `SimpleFunctionProblem` el comentario indica "Función a maximizar" pero el algoritmo en `SimplePSO` la trata como minimización. Decida si quiere maximizar o minimizar y ajuste el comentario o la lógica (p. ej. multiplicando por -1 si desea maximizar).
+```cmd
+java -cp out ui.PlotDemo
+```
 
-2. Inicialización de velocidades: las velocidades iniciales se generan con `Math.random()` que da valores en [0,1]. Normalmente se inicializan en un rango simétrico (por ejemplo [-vmax,vmax]) para permitir movimientos en ambas direcciones desde el inicio.
+Esto generará un archivo `function_plot.png` con el mapa de calor de la función.
 
-3. Sin control de límites: no hay límites de posición ni tope de velocidad (vmax). Las partículas pueden salir del dominio esperado. Se recomienda:
-   - Clampear la posición al rango [lowerBound, upperBound] o aplicar límites razonables.
-   - Limitar la velocidad a `[-vmax, vmax]`.
+### Cambiar la función a optimizar
 
-4. Evaluaciones redundantes: el código llama repetidamente `problem.evaluate(particles[i])` y `problem.evaluate(localBest[i])`. Es mejor cachear el valor de la evaluación para evitar computación repetida.
+Edita `Main.java` y cambia la línea:
+```java
+var problem = new Function4();  // Cambia por Function1, Function2, etc.
+```
 
-5. Reproducibilidad: se usa `Math.random()` sin semilla. Si desea reproducir resultados use `java.util.Random` con semilla controlada.
+### Ajustar parámetros del PSO
 
-6. Tipos y versión de Java: `record Particle` requiere Java 16+. Indíque en la documentación la versión mínima.
+En `Main.java`, modifica los parámetros del constructor:
+```java
+SimplePSO pso = new SimplePSO(
+    20,      // número de partículas
+    100,     // iteraciones
+    0.7,     // w (inercia)
+    1.4,     // c1 (cognitivo)
+    1.4,     // c2 (social)
+    problem  // función objetivo
+);
+```
 
-7. Nombrado / claridad: `creaEnjambreAleatorio` inicializa posiciones en [lowerBound, upperBound] pero las velocidades en [0,1]. Podría aceptar un parámetro `vmax` o un rango para velocidades.
+Para especificar un `vmax` personalizado:
+```java
+SimplePSO pso = new SimplePSO(20, 100, 0.7, 1.4, 1.4, 2.5, problem);
+//                                                      ↑ vmax
+```
 
-Mejoras sugeridas (rápidas)
----------------------------
-- Añadir control de límites y `vmax`.
-- Inicializar velocidades en rango simétrico e introducir semilla reproducible.
-- Reducir llamadas a `evaluate` guardando el valor actual de cada partícula.
-- Añadir logging opcional o guardar resultados a CSV/Excel.
-- Añadir tests unitarios sencillos para la función objetivo y la actualización de velocidad/posición.
+---
 
-Ejemplo de salida esperada
--------------------------
-El `Main` ya imprime las iteraciones y la mejor solución encontrada. Por ejemplo:
+## 🎬 Ejemplos y Visualizaciones
 
+### Ejemplo 1: Ejecutar PSO con visualización
+
+**Código** (`Main.java` con `visualize = true`):
+```java
+boolean visualize = true;
+var problem = new Function4();  // Rastrigin (multimodal)
+SimplePSO pso = new SimplePSO(20, 100, 0.7, 1.4, 1.4, problem);
+```
+
+**Resultado esperado**:
+- Se abre una ventana con el mapa de calor de Rastrigin
+- Puntos negros = partículas del enjambre
+- Punto magenta = mejor solución global (gbest)
+- Marca roja = mínimo real de la función
+- Las partículas se mueven en cada iteración
+- En la consola se imprime: `Iter X: best=(x,y) -> valor`
+
+**Salida de consola**:
+```
 Iteración;Mejor solución;Valor
-1;(x, y);value
+1;(-2.341, 1.892);15.2341
+2;(-1.932, 1.234);8.5632
 ...
+100;(0.0012, -0.0034);0.0023
 
-Al final imprime la mejor solución encontrada y el valor de la función en dicha solución.
+Best solution: (0.0012, -0.0034) -> 0.0023
+```
 
-Cobertura de requisitos
------------------------
-- Analizar el código: He revisado los ficheros fuente y descrito el funcionamiento y puntos débiles. — Hecho
-- Señalar si hay algo mal: Comentarios inconsistentes y recomendaciones prácticas — Hecho
-- Explicar PSO básicamente: Incluido en la sección "Cómo funciona el PSO" — Hecho
-- Documentar el código en un README: He creado este `README.md`. — Hecho
+### Ejemplo 2: Comparar funciones fáciles vs difíciles
 
-Siguientes pasos (opcionales)
-----------------------------
-Si quieres, puedo:
-- Aplicar las mejoras sugeridas directamente en el código (ej: límites de posición, `vmax`, semilla reproducible).
-- Añadir tests unitarios y un script de ejecución.
+**Función fácil** (Sphere - Function2):
+```java
+var problem = new Function2();  // Convexa, convergencia rápida
+SimplePSO pso = new SimplePSO(10, 50, 0.5, 1.5, 1.5, problem);
+```
+→ PSO encuentra el óptimo (0,0) en pocas iteraciones.
 
-Si quieres que implemente alguna de las mejoras, dime cuáles y lo hago.
+**Función difícil** (Rastrigin - Function4):
+```java
+var problem = new Function4();  // Multimodal, muchos mínimos locales
+SimplePSO pso = new SimplePSO(30, 200, 0.7, 1.4, 1.4, problem);
+```
+→ Necesita más partículas e iteraciones. Puede quedar atrapado en mínimos locales.
 
-Pseudocódigo del PSO (esquema general y correspondencia con esta implementación)
--------------------------------------------------------------------------------
+### Ejemplo 3: Efecto de los parámetros
 
-A continuación hay un pseudocódigo en castellano que resume el algoritmo PSO y apunta a dónde se implementa cada paso en este proyecto.
+**Alta inercia (w = 0.9)**: Mayor exploración, convergencia más lenta
+```java
+SimplePSO pso = new SimplePSO(20, 100, 0.9, 1.4, 1.4, problem);
+```
 
-Pseudocódigo (alto nivel):
+**Baja inercia (w = 0.4)**: Mayor explotación, convergencia rápida (riesgo de mínimos locales)
+```java
+SimplePSO pso = new SimplePSO(20, 100, 0.4, 1.4, 1.4, problem);
+```
 
-1. Inicialización
-   - Crear N partículas con posiciones (x,y) y velocidades (vx,vy) aleatorias en el dominio.
-   - Evaluar cada partícula y guardar su mejor posición local (pbest).
-   - Determinar la mejor posición global (gbest) entre todas las partículas.
+**Alto componente social (c2 = 2.0)**: Las partículas convergen rápidamente hacia gbest
+```java
+SimplePSO pso = new SimplePSO(20, 100, 0.7, 1.4, 2.0, problem);
+```
 
-   // En el código: `SimplePSO.creaEnjambreAleatorio(...)` crea las partículas.
-   // `localBest[]` y `localBestValue[]` almacenan pbest; la variable `globalBest` y `globalBestValue` almacenan gbest.
+### Ejemplo 4: Generar imagen PNG sin GUI
 
-2. Bucle principal (iteraciones)
-   Para iter = 1 .. maxIteraciones:
-     Para cada partícula i:
-       - Generar r1, r2 ~ Uniform(0,1)
-       - vx = w * vx + c1 * r1 * (pbest.x - x) + c2 * r2 * (gbest.x - x)
-       - vy = w * vy + c1 * r1 * (pbest.y - y) + c2 * r2 * (gbest.y - y)
-       - Limitar velocidad a [-vmax, vmax] (opcional)
-       - x = x + vx
-       - y = y + vy
-       - Clampear posición al dominio [xmin,xmax]x[ymin,ymax] (opcional)
-       - value = evaluate(x,y)
-       - Si value < pbest_value: actualizar pbest y pbest_value
-       - Si value < gbest_value: actualizar gbest y gbest_value
-     Fin para
-     (Opcional) Notificar observadores / actualizar GUI con las posiciones actuales
-   Fin para
+Ejecuta `PlotDemo` para obtener una visualización estática:
+```cmd
+java -cp out ui.PlotDemo
+```
 
-   // En el código: el bucle principal está en `SimplePSO.run(PSOListener)`.
-   // Las constantes w, c1, c2 se pasan al constructor de `SimplePSO`.
-   // Se aplican límites de velocidad y de posición en la actualización.
-   // `PSOListener` permite una visualización paso a paso (usado en `Main.java`).
+Modifica `PlotDemo.java` para cambiar la función:
+```java
+var problem = new Function6();  // Himmelblau (4 mínimos)
+```
 
-Notas de correspondencia y decisiones de implementación
-- Minimización vs Maximización: El proyecto trata la función como problema de minimización (menor valor es mejor). Si quieres maximizar, invierte el signo en la evaluación.
-- Evaluaciones: para evitar evaluaciones redundantes, se guarda el valor de cada partícula en `localBestValue[]` y se calcula `value` una sola vez tras mover la partícula.
-- Reproducibilidad: el generador aleatorio usa `java.util.Random` sin semilla por defecto; puedes añadir una semilla en `SimplePSO` si necesitas reproducibilidad.
-- Visualización: `FunctionPlotter` crea un mapa de calor de la función y soporta overlays de partículas (mediante `updateParticles(...)` y `refresh()`). `Main.java` muestra cómo activar la visualización usando `PSOListener`.
+Resultado: archivo `function_plot.png` con:
+- Mapa de calor (azul=bajo, rojo=alto)
+- Ejes con etiquetas
+- Rejilla
+- Marca del mínimo encontrado
 
-Consejos para extender o adaptar el algoritmo
-- Añadir un parámetro `vmax` configurable en `SimplePSO` para ajustarlo sin depender del tamaño del dominio.
-- Cambiar la inicialización de velocidades o la estrategia de inercia (p. ej. w decreciente).
-- Implementar topologías de vecindad (PSO local) guardando vecinos en vez del único `globalBest`.
-- Guardar trayectorias o resultados en CSV para análisis posterior.
+### Ejemplo 5: Desactivar visualización (modo batch)
+
+En `Main.java`:
+```java
+boolean visualize = false;
+```
+
+Útil para:
+- Ejecutar múltiples pruebas automáticas
+- Medir tiempos de ejecución sin overhead gráfico
+- Integrar con scripts de experimentación
+
+---
+
+## 🔬 Actividades Sugeridas para Clase
+
+1. **Exploración de parámetros**: Variar w, c1, c2 y observar el efecto en la convergencia.
+
+2. **Comparación de funciones**: Ejecutar PSO en Function2 (fácil) vs Function4 (difícil).
+
+3. **Análisis de convergencia**: Graficar la evolución de gbest_valor vs iteraciones.
+
+4. **Efecto del tamaño del enjambre**: Probar con 5, 10, 20, 50 partículas.
+
+5. **Límite de velocidad**: Comparar comportamiento con y sin vmax.
+
+6. **Modificación del algoritmo**: Implementar PSO con topología de vecindario (ring, star).
+
+7. **Nuevas funciones**: Añadir ``FunctionXX`` con tu propia función de prueba.
+
+---
+
+## 📚 Referencias y Recursos
+
+- Kennedy, J., & Eberhart, R. (1995). Particle swarm optimization.
+- Shi, Y., & Eberhart, R. (1998). A modified particle swarm optimizer.
+- [Virtual Library of Simulation Experiments - Test Functions](https://www.sfu.ca/~ssurjano/optimization.html)
+
+---
+
+## 📝 Notas Técnicas
+
+- **Reproducibilidad**: El generador aleatorio no usa semilla fija. Para reproducir resultados, modifica `SimplePSO` para aceptar una semilla.
+- **Dominio automático**: Cada `Problem` define su propio dominio. No es necesario hardcodear límites.
+- **Visualización en tiempo real**: La actualización usa `SwingUtilities.invokeLater` para evitar bloquear el EDT.
+- **Pausa entre iteraciones**: Hay un `Thread.sleep(100)` en modo visualización para que la animación sea visible.
+
+---
+
+## 🛠️ Extensiones Posibles
+
+- Añadir PSO con inercia decreciente linealmente
+- Implementar PSO con constricción (clerc)
+- Agregar topologías de vecindario (lbest)
+- Exportar trayectorias a CSV para análisis
+- Añadir más dimensiones (3D, N-D)
+- Implementar variantes (APSO, BBPSO, etc.)
+
+---
+

@@ -1,3 +1,5 @@
+package core;
+
 import java.util.Random;
 
 public class SimplePSO {
@@ -8,8 +10,10 @@ public class SimplePSO {
     private final double c2;
     private final Problem problem;
     private final Random rand = new Random(); // para reproducibilidad opcional se puede pasar semilla
+    // Límite máximo absoluto de la velocidad (vmax). Si es NaN, se deriva del dominio en tiempo de ejecución.
+    private final double vmaxLimit;
 
-    // Constructor del algoritmo
+    // Constructor del algoritmo (mantener compatibilidad: sin parámetro vmax)
     public SimplePSO(int numParticles, int numIterations, double w, double c1, double c2, Problem problem) {
         this.numParticles = numParticles;
         this.numIterations = numIterations;
@@ -17,16 +21,34 @@ public class SimplePSO {
         this.c1 = c1;
         this.c2 = c2;
         this.problem = problem;
+        this.vmaxLimit = Double.NaN; // indica comportamiento por defecto (derivado del dominio)
     }
 
-    private Particle[] creaEnjambreAleatorio(double lowerBound, double upperBound) {
+    /**
+     * Nuevo constructor que permite definir un `vmax` explicito (límite de velocidad).
+     *
+     * @param vmax máximo de velocidad absoluta que se aplicará a vx y vy (>=0)
+     */
+    public SimplePSO(int numParticles, int numIterations, double w, double c1, double c2, double vmax, Problem problem) {
+        this.numParticles = numParticles;
+        this.numIterations = numIterations;
+        this.w = w;
+        this.c1 = c1;
+        this.c2 = c2;
+        this.problem = problem;
+        this.vmaxLimit = Math.max(0.0, vmax);
+    }
+
+    private Particle[] creaEnjambreAleatorio(double xMin, double xMax, double yMin, double yMax) {
         // Inicializamos las partículas (posición y velocidad) usando umbrales
         Particle[] particles = new Particle[numParticles];
-        double range = upperBound - lowerBound;
-        double vmax = range; // velocidad máxima inicial (se puede ajustar)
+        double xrange = xMax - xMin;
+        double yrange = yMax - yMin;
+        // Si el usuario definió un vmaxLimit en el constructor, úsalo; si no, por defecto usamos el mayor rango
+        double vmax = Double.isNaN(this.vmaxLimit) ? Math.max(xrange, yrange) : this.vmaxLimit;
         for (int i = 0; i < numParticles; i++) {
-            double x = lowerBound + rand.nextDouble() * range;
-            double y = lowerBound + rand.nextDouble() * range;
+            double x = xMin + rand.nextDouble() * xrange;
+            double y = yMin + rand.nextDouble() * yrange;
             double vx = (rand.nextDouble() * 2.0 - 1.0) * vmax; // en [-vmax, vmax]
             double vy = (rand.nextDouble() * 2.0 - 1.0) * vmax;
             particles[i] = new Particle(x, y, vx, vy);
@@ -48,14 +70,18 @@ public class SimplePSO {
 
         // INICIALIZACIÓN -----------------------------------------------------
 
-        // Definimos un dominio para posiciones (antes estaba codificado como 0,5)
-        double lowerBound = 0.0;
-        double upperBound = 5.0;
-        double range = upperBound - lowerBound;
-        double vmax = range; // tope de velocidad
+        // Usar el dominio provisto por el problema
+        double xMin = problem.xMin();
+        double xMax = problem.xMax();
+        double yMin = problem.yMin();
+        double yMax = problem.yMax();
+        double xrange = xMax - xMin;
+        double yrange = yMax - yMin;
+        // Determinar el tope de velocidad efectivo: si el usuario pasó un vmaxLimit lo usamos, si no lo derivamos del domain range
+        double vmax = Double.isNaN(this.vmaxLimit) ? Math.max(xrange, yrange) : this.vmaxLimit; // tope de velocidad
 
-        // Inicializamos las partículas (posición y velocidad)
-        Particle[] particles = creaEnjambreAleatorio(lowerBound, upperBound);
+        // Inicializamos las partículas (posicion y velocidad)
+        Particle[] particles = creaEnjambreAleatorio(xMin, xMax, yMin, yMax);
 
         // Mejores partículas locales (y sus valores)
         Particle[] localBest = new Particle[numParticles];
@@ -102,9 +128,9 @@ public class SimplePSO {
                 double x = particles[i].x() + vx;
                 double y = particles[i].y() + vy;
 
-                // Clampear la posición al dominio
-                x = Math.max(lowerBound, Math.min(upperBound, x));
-                y = Math.max(lowerBound, Math.min(upperBound, y));
+                // Clampear la posición al dominio (por ejes)
+                x = Math.max(xMin, Math.min(xMax, x));
+                y = Math.max(yMin, Math.min(yMax, y));
 
                 // Actualizamos valores de la partícula
                 Particle newParticle = new Particle(x, y, vx, vy);

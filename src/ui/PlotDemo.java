@@ -1,13 +1,18 @@
+package ui;
+
+import functions.*;
+import core.Particle;
+
 import java.io.File;
 import java.io.IOException;
 
 public class PlotDemo {
     public static void main(String[] args) {
-        SimpleFunctionProblem problem = new SimpleFunctionProblem();
+        var problem = new Function4();
         FunctionPlotter.Function2D f = (x, y) -> problem.evaluate(new Particle(x, y, 0, 0));
 
-        // Dominio y resolución (ajustable)
-        double xMin = 0.0, xMax = 5.0, yMin = 0.0, yMax = 5.0;
+        // Usar dominio definido por el problema
+        double xMin = problem.xMin(), xMax = problem.xMax(), yMin = problem.yMin(), yMax = problem.yMax();
         int width = 800, height = 600;
 
         FunctionPlotter plotter = new FunctionPlotter(f, xMin, xMax, yMin, yMax, width, height);
@@ -26,4 +31,3 @@ public class PlotDemo {
         // plotter.show("Function plot");
     }
 }
-

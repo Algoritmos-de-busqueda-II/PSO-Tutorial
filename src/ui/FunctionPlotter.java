@@ -1,3 +1,6 @@
+package ui;
+
+import core.Particle;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Dimension;
@@ -284,20 +287,113 @@ public class FunctionPlotter {
         javax.swing.SwingUtilities.invokeLater(() -> panel.repaint());
     }
 
+    /** Genera una imagen completa (mapa de calor + ejes + rejilla + overlays) */
+    private BufferedImage renderFullImage() {
+        if (image == null) render();
+        int outW = width + leftMargin + rightMargin;
+        int outH = height + topMargin + bottomMargin;
+        BufferedImage outImg = new BufferedImage(outW, outH, BufferedImage.TYPE_INT_RGB);
+        Graphics g0 = outImg.getGraphics();
+        // Reproducir la lógica de paintComponent en show()
+        // Dibujar fondo blanco
+        g0.setColor(Color.WHITE);
+        g0.fillRect(0, 0, outW, outH);
+        int ix = leftMargin;
+        int iy = topMargin;
+        int iw = Math.max(10, outW - leftMargin - rightMargin);
+        int ih = Math.max(10, outH - topMargin - bottomMargin);
+        // Dibujar la imagen escalada
+        g0.drawImage(image, ix, iy, iw, ih, null);
+
+        // Dibujar rejilla y ejes
+        g0.setColor(new Color(0,0,0,180));
+        double tx0 = (0 - xMin) / (xMax - xMin);
+        double ty0 = (yMax - 0) / (yMax - yMin);
+        int axisX = (xMin <= 0 && 0 <= xMax) ? ix + (int)Math.round(tx0 * (iw - 1)) : ix;
+        int axisY = (yMin <= 0 && 0 <= yMax) ? iy + (int)Math.round(ty0 * (ih - 1)) : iy + ih - 1;
+        g0.drawLine(axisX, iy, axisX, iy + ih - 1);
+        g0.drawLine(ix, axisY, ix + iw - 1, axisY);
+
+        g0.setColor(new Color(0,0,0,60));
+        int ticks = 8;
+        for (int t = 0; t <= ticks; t++) {
+            int xi = ix + (int) Math.round((double) t / ticks * (iw - 1));
+            g0.drawLine(xi, iy, xi, iy + ih - 1);
+        }
+        for (int t = 0; t <= ticks; t++) {
+            int yj = iy + (int) Math.round((double) t / ticks * (ih - 1));
+            g0.drawLine(ix, yj, ix + iw - 1, yj);
+        }
+
+        // Ticks y etiquetas
+        g0.setColor(Color.BLACK);
+        int labelTicks = 5;
+        for (int t = 0; t <= labelTicks; t++) {
+            double tx = (double) t / labelTicks;
+            int xi = ix + (int) Math.round(tx * (iw - 1));
+            double xv = xMin + tx * (xMax - xMin);
+            g0.drawLine(xi, axisY - 4, xi, axisY + 4);
+            String label = String.format("%.2f", xv);
+            int strW = g0.getFontMetrics().stringWidth(label);
+            g0.drawString(label, xi - strW/2, iy + ih + 20);
+        }
+        for (int t = 0; t <= labelTicks; t++) {
+            double ty = (double) t / labelTicks;
+            int yj = iy + (int) Math.round(ty * (ih - 1));
+            double yv = yMax - ty * (yMax - yMin);
+            g0.drawLine(axisX - 4, yj, axisX + 4, yj);
+            String label = String.format("%.2f", yv);
+            g0.drawString(label, 2, yj + 4);
+        }
+
+        // Dibujar mínimo
+        if (minI >= 0 && minJ >= 0) {
+            double minX = xMin + (double) minI * (xMax - xMin) / (width - 1);
+            double minY = yMax - (double) minJ * (yMax - yMin) / (height - 1);
+            int px = ix + (int) Math.round((minX - xMin) / (xMax - xMin) * (iw - 1));
+            int py = iy + (int) Math.round((yMax - minY) / (yMax - yMin) * (ih - 1));
+            g0.setColor(Color.WHITE);
+            int r = Math.max(4, Math.min(iw, ih) / 100);
+            g0.fillOval(px - r, py - r, 2*r, 2*r);
+            g0.setColor(Color.RED);
+            g0.drawOval(px - r, py - r, 2*r, 2*r);
+            String info = String.format("min: (%.3f, %.3f)=%.4f", minX, minY, vmin);
+            g0.setColor(Color.BLACK);
+            int infoX = Math.min(ix + iw - 4 - g0.getFontMetrics().stringWidth(info), px + r + 4);
+            int infoY = Math.max(12, py - r - 4);
+            g0.drawString(info, infoX, infoY);
+        }
+
+        // Dibujar overlays de partículas
+        synchronized (this) {
+            if (overlayParticles != null) {
+                for (Particle p : overlayParticles) {
+                    double px = (p.x() - xMin) / (xMax - xMin);
+                    double py = (yMax - p.y()) / (yMax - yMin);
+                    int xi = ix + (int)Math.round(px * (iw - 1));
+                    int yj = iy + (int)Math.round(py * (ih - 1));
+                    g0.setColor(new Color(0,0,0,180));
+                    g0.fillOval(xi-3, yj-3, 6, 6);
+                }
+            }
+            if (overlayGlobalBest != null) {
+                double px = (overlayGlobalBest.x() - xMin) / (xMax - xMin);
+                double py = (yMax - overlayGlobalBest.y()) / (yMax - yMin);
+                int xi = ix + (int)Math.round(px * (iw - 1));
+                int yj = iy + (int)Math.round(py * (ih - 1));
+                g0.setColor(Color.MAGENTA);
+                int r = 6;
+                g0.fillOval(xi-r, yj-r, 2*r, 2*r);
+            }
+        }
+
+        g0.dispose();
+        return outImg;
+    }
+
     /** Guarda la imagen renderizada como PNG en el fichero dado. */
     public void savePNG(File outFile) throws IOException {
-        if (image == null) render();
-        // Para guardar con ejes y overlays, render temporal en un panel
-        // Simplest approach: render and then draw axes and overlays on copy
-        BufferedImage outImg = new BufferedImage(width + leftMargin + rightMargin, height + topMargin + bottomMargin, BufferedImage.TYPE_INT_RGB);
-        Graphics g = outImg.getGraphics();
-        // paint using same logic as in show()
-        render();
-        // Use show() painting logic via a temporary panel would be complex; instead, place image with margins and draw simple axes and markers
-        g.setColor(Color.WHITE);
-        g.fillRect(0,0,outImg.getWidth(), outImg.getHeight());
-        g.drawImage(image, leftMargin, topMargin, width, height, null);
-        g.dispose();
+        BufferedImage outImg = renderFullImage();
         ImageIO.write(outImg, "png", outFile);
     }
 
