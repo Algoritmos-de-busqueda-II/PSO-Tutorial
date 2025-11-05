@@ -292,6 +292,9 @@ SimplePSO pso = new SimplePSO(20, 100, 0.7, 1.4, 1.4, problem);
 - Las partículas se mueven en cada iteración
 - En la consola se imprime: `Iter X: best=(x,y) -> valor`
 
+<img width="611" height="625" alt="image" src="https://github.com/user-attachments/assets/43bdac23-b596-4f97-9034-f3a2e7dc9080" />
+
+
 **Salida de consola**:
 ```
 Iteración;Mejor solución;Valor
@@ -353,6 +356,9 @@ Resultado: archivo `function_plot.png` con:
 - Ejes con etiquetas
 - Rejilla
 - Marca del mínimo encontrado
+
+<img width="890" height="670" alt="image" src="https://github.com/user-attachments/assets/dd8fbf1e-1156-4744-8b97-fcb9d7d148e0" />
+
 
 ### Ejemplo 5: Desactivar visualización (modo batch)
 
