@@ -2,6 +2,19 @@ package core;
 
 import java.util.Random;
 
+/**
+ * Implementación simple de Particle Swarm Optimization (PSO) en 2D.
+ * <p>
+ * Ejecuta un PSO básico sobre un {@link Problem} de dos variables (x, y). Se
+ * permiten dos constructores: uno que deriva el tope de velocidad (vmax) a
+ * partir del dominio del problema y otro que acepta un vmax explícito.
+ * </p>
+ * <p>
+ * La clase mantiene el mejor local por partícula y el mejor global. El método
+ * {@link #run(PSOListener)} permite pasar un listener para visualizar o
+ * almacenar el progreso tras cada iteración.
+ * </p>
+ */
 public class SimplePSO {
     private final int numParticles;
     private final int numIterations;
@@ -13,7 +26,17 @@ public class SimplePSO {
     // Límite máximo absoluto de la velocidad (vmax). Si es NaN, se deriva del dominio en tiempo de ejecución.
     private final double vmaxLimit;
 
-    // Constructor del algoritmo (mantener compatibilidad: sin parámetro vmax)
+    /**
+     * Constructor por defecto que no fija un límite de velocidad: el vmax será
+     * derivado del dominio del problema en tiempo de ejecución.
+     *
+     * @param numParticles número de partículas en el enjambre
+     * @param numIterations número de iteraciones a ejecutar
+     * @param w peso de inercia
+     * @param c1 coeficiente cognitivo (atracción a la mejor local)
+     * @param c2 coeficiente social (atracción a la mejor global)
+     * @param problem instancia de {@link Problem} que provee dominio y evaluación
+     */
     public SimplePSO(int numParticles, int numIterations, double w, double c1, double c2, Problem problem) {
         this.numParticles = numParticles;
         this.numIterations = numIterations;
@@ -25,9 +48,15 @@ public class SimplePSO {
     }
 
     /**
-     * Nuevo constructor que permite definir un `vmax` explicito (límite de velocidad).
+     * Nuevo constructor que permite definir un `vmax` explícito (límite de velocidad).
      *
+     * @param numParticles número de partículas en el enjambre
+     * @param numIterations número de iteraciones a ejecutar
+     * @param w peso de inercia
+     * @param c1 coeficiente cognitivo (atracción a la mejor local)
+     * @param c2 coeficiente social (atracción a la mejor global)
      * @param vmax máximo de velocidad absoluta que se aplicará a vx y vy (>=0)
+     * @param problem instancia de {@link Problem} que provee dominio y evaluación
      */
     public SimplePSO(int numParticles, int numIterations, double w, double c1, double c2, double vmax, Problem problem) {
         this.numParticles = numParticles;
@@ -66,6 +95,13 @@ public class SimplePSO {
         void onIteration(int iteration, Particle[] particles, Particle globalBest, double globalBestValue);
     }
 
+    /**
+     * Ejecuta el algoritmo PSO.
+     *
+     * @param listener un objeto que implementa {@link PSOListener} para recibir actualizaciones en cada iteración, o null
+     *                 si no se desean actualizaciones
+     * @return la mejor partícula global encontrada
+     */
     public Particle run(PSOListener listener) {
 
         // INICIALIZACIÓN -----------------------------------------------------
