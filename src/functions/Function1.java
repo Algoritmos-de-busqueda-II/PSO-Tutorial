@@ -11,7 +11,7 @@ public class Function1 implements Problem {
         return (Math.pow((p.x()-3.14),2)+Math.pow((p.y()-2.72),2)+Math.sin(3*p.x()+1.41)+Math.sin(4*p.y()-1.73));
     }
 
-    // Dominio: por defecto [0,5] en ambas coordenadas (consistente con el código original)
+    // Dominio: por defecto [0,5]
     @Override
     public double xMin() { return 0.0; }
     @Override
